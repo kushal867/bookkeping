@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+<body>
+<h1>Trial Balance</h1>
+<table border="1" cellspacing="0" cellpadding="4">
+<tr><th>Account</th><th>Debit</th><th>Credit</th></tr>
+{% for a in accounts %}
+<tr>
+  <td>{{ a.name }}</td>
+  <td>{{ a.debit_total|default:0 }}</td>
+  <td>{{ a.credit_total|default:0 }}</td>
+</tr>
+{% endfor %}
+<tr>
+  <td><strong>TOTALS</strong></td>
+  <td><strong>{{ total_debits|floatformat:2 }}</strong></td>
+  <td><strong>{{ total_credits|floatformat:2 }}</strong></td>
+</tr>
+</table>
+<p><strong>Difference:</strong> {{ difference|floatformat:2 }}</p>
+<p><strong>Status:</strong> {% if total_debits == total_credits %}Balanced{% else %}Unbalanced{% endif %}</p>
+</body>
+</html>

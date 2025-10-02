@@ -5,12 +5,12 @@ from django.shortcuts import render, redirect, get_object_or_404
 
 from .models import Account, Transaction
 from .forms import TransactionForm, EntryFormSet
-from .exports import export_ledger_excel, export_trial_balance_pdf
+from .export_utils import export_ledger_excel, export_trial_balance_pdf
 
 
 def accounts_list(request):
     accounts = Account.objects.order_by('type', 'name')
-    return render(request, 'bookkeeping/accounts_list.html', {'accounts': accounts})
+    return render(request, 'bookkepping/accounts_list.html', {'accounts': accounts})
 
 
 def new_transaction(request):
@@ -45,7 +45,7 @@ def new_transaction(request):
         tform = TransactionForm()
         eformset = EntryFormSet()
 
-    return render(request, 'bookkeeping/transaction_form.html', {
+    return render(request, 'bookkepping/transaction_form.html', {
         'tform': tform,
         'eformset': eformset
     })
@@ -53,7 +53,7 @@ def new_transaction(request):
 
 def transaction_list(request):
     txs = Transaction.objects.prefetch_related('entries__account').order_by('-date')
-    return render(request, 'bookkeeping/transaction_list.html', {'transactions': txs})
+    return render(request, 'bookkepping/transaction_list.html', {'transactions': txs})
 
 
 def trial_balance(request):
@@ -66,10 +66,14 @@ def trial_balance(request):
     total_debits = sum((a.debit_total or 0) for a in accounts)
     total_credits = sum((a.credit_total or 0) for a in accounts)
 
-    return render(request, 'bookkeeping/trial_balance.html', {
+    # Calculate difference
+    difference = total_debits - total_credits
+    
+    return render(request, 'bookkepping/trial_balance.html', {
         'accounts': accounts,
         'total_debits': total_debits,
         'total_credits': total_credits,
+        'difference': difference,
     })
 
 

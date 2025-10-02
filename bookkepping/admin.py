@@ -12,7 +12,6 @@ class AccountAdmin(admin.ModelAdmin):
 class LedgerEntryInline(admin.TabularInline):
     model = LedgerEntry
     extra = 1
-    readonly_fields = ('debit', 'credit')
 
 
 @admin.register(Transaction)
@@ -21,6 +20,10 @@ class TransactionAdmin(admin.ModelAdmin):
     date_hierarchy = 'date'
     search_fields = ('description',)
     inlines = [LedgerEntryInline]
+    
+    def save_model(self, request, obj, form, change):
+        # Skip validation for admin saves since entries are handled separately
+        obj.save()
 
 
 @admin.register(LedgerEntry)

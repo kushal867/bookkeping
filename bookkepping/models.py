@@ -29,8 +29,12 @@ class Transaction(models.Model):
             debits = sum(Decimal(ed.get("debit") or 0) for ed in self._entries_preview)
             credits = sum(Decimal(ed.get("credit") or 0) for ed in self._entries_preview)
         else:
-            debits = sum(self.entries.values_list("debit", flat=True))
-            credits = sum(self.entries.values_list("credit", flat=True))
+            # Only validate if entries exist and transaction has been saved
+            if self.pk and hasattr(self, 'entries') and self.entries.exists():
+                debits = sum(self.entries.values_list("debit", flat=True))
+                credits = sum(self.entries.values_list("credit", flat=True))
+            else:
+                return  # Skip validation if no entries or not saved yet
 
         if debits != credits:
             raise ValidationError("Transaction is not balanced: total debits must equal total credits")

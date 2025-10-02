@@ -1,0 +1,158 @@
+{% extends 'bookkepping/base.html' %}
+{% block title %}Transactions - Bookkeeping System{% endblock %}
+
+{% block content %}
+<h2>💼 Transaction History</h2>
+
+<div class="stats">
+  <div class="stat-card">
+    <h3>{{ transactions|length }}</h3>
+    <p>Total Transactions</p>
+  </div>
+  <div class="stat-card">
+    <h3>{% for tx in transactions %}{% for entry in tx.entries.all %}{{ entry.debit|floatformat:2 }}{% endfor %}{% endfor %}</h3>
+    <p>Total Debits</p>
+  </div>
+  <div class="stat-card">
+    <h3>{% for tx in transactions %}{% for entry in tx.entries.all %}{{ entry.credit|floatformat:2 }}{% endfor %}{% endfor %}</h3>
+    <p>Total Credits</p>
+  </div>
+</div>
+
+<div style="margin-bottom: 20px;">
+  <a href="{% url 'bookkeeping:transaction_new' %}" class="btn">➕ New Transaction</a>
+</div>
+
+<div style="overflow-x: auto;">
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Description</th>
+        <th>Journal Entries</th>
+        <th>Total Amount</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for tx in transactions %}
+      <tr>
+        <td>
+          <strong>{{ tx.date|date:"M d, Y" }}</strong>
+          <br>
+          <small style="color: #7f8c8d;">{{ tx.date|date:"D" }}</small>
+        </td>
+        <td>
+          <strong>{{ tx.description }}</strong>
+        </td>
+        <td>
+          <div class="entries-container">
+            {% for entry in tx.entries.all %}
+            <div class="entry-item">
+              <span class="account-name">{{ entry.account.name }}</span>
+              <div class="amounts">
+                {% if entry.debit > 0 %}
+                  <span class="debit">Dr ${{ entry.debit|floatformat:2 }}</span>
+                {% endif %}
+                {% if entry.credit > 0 %}
+                  <span class="credit">Cr ${{ entry.credit|floatformat:2 }}</span>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </td>
+        <td>
+          <strong>
+            {% for entry in tx.entries.all %}
+              {% if entry.debit > 0 %}
+                ${{ entry.debit|floatformat:2 }}
+              {% elif entry.credit > 0 %}
+                ${{ entry.credit|floatformat:2 }}
+              {% endif %}
+            {% endfor %}
+          </strong>
+        </td>
+        <td>
+          <a href="{% url 'bookkeeping:transaction_new' %}" class="btn" style="padding: 6px 12px; font-size: 14px;">Edit</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="5" style="text-align: center; padding: 40px; color: #7f8c8d;">
+          <p>No transactions found. <a href="{% url 'bookkeeping:transaction_new' %}" class="btn">Create your first transaction</a></p>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<style>
+.entries-container {
+  max-width: 300px;
+}
+
+.entry-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #ecf0f1;
+}
+
+.entry-item:last-child {
+  border-bottom: none;
+}
+
+.account-name {
+  font-weight: 600;
+  color: #2c3e50;
+  flex: 1;
+}
+
+.amounts {
+  display: flex;
+  gap: 10px;
+}
+
+.debit {
+  color: #e74c3c;
+  font-weight: 600;
+  background: rgba(231, 76, 60, 0.1);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.credit {
+  color: #27ae60;
+  font-weight: 600;
+  background: rgba(39, 174, 96, 0.1);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+table td {
+  vertical-align: top;
+}
+
+@media (max-width: 768px) {
+  .entries-container {
+    max-width: 200px;
+  }
+  
+  .entry-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .amounts {
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+</style>
+{% endblock %}

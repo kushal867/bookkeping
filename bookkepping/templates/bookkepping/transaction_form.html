@@ -1,0 +1,216 @@
+{% extends 'bookkepping/base.html' %}
+{% block title %}New Transaction - Bookkeeping System{% endblock %}
+
+{% block content %}
+<h2>➕ New Transaction</h2>
+
+{% if tform.non_field_errors %}
+  <div class="alert alert-error">
+    <strong>Error:</strong> {{ tform.non_field_errors }}
+  </div>
+{% endif %}
+
+<form method="post" id="transactionForm">
+  {% csrf_token %}
+  
+  <div class="form-group">
+    <label for="{{ tform.description.id_for_label }}">Transaction Description</label>
+    {{ tform.description }}
+    {% if tform.description.errors %}
+      <div class="alert alert-error">{{ tform.description.errors }}</div>
+    {% endif %}
+  </div>
+
+  <h3>📝 Journal Entries</h3>
+  <p style="color: #7f8c8d; margin-bottom: 20px;">
+    <strong>Note:</strong> Total debits must equal total credits for the transaction to be balanced.
+  </p>
+  
+  {{ eformset.management_form }}
+  
+  <div style="overflow-x: auto;">
+    <table id="entriesTable">
+      <thead>
+        <tr>
+          <th>Account</th>
+          <th>Debit Amount</th>
+          <th>Credit Amount</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for form in eformset %}
+        <tr class="entry-row">
+          <td>
+            {{ form.account }}
+            {% if form.account.errors %}
+              <div class="alert alert-error">{{ form.account.errors }}</div>
+            {% endif %}
+          </td>
+          <td>
+            {{ form.debit }}
+            {% if form.debit.errors %}
+              <div class="alert alert-error">{{ form.debit.errors }}</div>
+            {% endif %}
+          </td>
+          <td>
+            {{ form.credit }}
+            {% if form.credit.errors %}
+              <div class="alert alert-error">{{ form.credit.errors }}</div>
+            {% endif %}
+          </td>
+          <td>
+            <button type="button" class="btn btn-danger remove-row" style="padding: 8px 16px; font-size: 14px;">Remove</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  
+  <div style="margin-top: 20px;">
+    <button type="button" id="addRow" class="btn" style="margin-right: 10px;">➕ Add Entry</button>
+    <button type="submit" class="btn">💾 Save Transaction</button>
+    <a href="{% url 'bookkeeping:transaction_list' %}" class="btn btn-danger">❌ Cancel</a>
+  </div>
+  
+  <div id="balanceCheck" style="margin-top: 20px; padding: 15px; border-radius: 8px; display: none;">
+    <strong>Balance Check:</strong>
+    <span id="balanceStatus"></span>
+  </div>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const addRowBtn = document.getElementById('addRow');
+    const entriesTable = document.getElementById('entriesTable');
+    const balanceCheck = document.getElementById('balanceCheck');
+    const balanceStatus = document.getElementById('balanceStatus');
+    
+    // Add new row functionality
+    addRowBtn.addEventListener('click', function() {
+        const tbody = entriesTable.querySelector('tbody');
+        const newRow = tbody.querySelector('tr').cloneNode(true);
+        
+        // Clear values in new row
+        newRow.querySelectorAll('input').forEach(input => {
+            input.value = '';
+            input.name = input.name.replace(/-\d+-/, '-' + (tbody.children.length) + '-');
+            input.id = input.id.replace(/-\d+-/, '-' + (tbody.children.length) + '-');
+        });
+        
+        // Clear errors
+        newRow.querySelectorAll('.alert').forEach(alert => alert.remove());
+        
+        tbody.appendChild(newRow);
+        updateFormCount();
+    });
+    
+    // Remove row functionality
+    entriesTable.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-row')) {
+            if (entriesTable.querySelectorAll('.entry-row').length > 1) {
+                e.target.closest('tr').remove();
+                updateFormCount();
+            } else {
+                alert('At least one entry is required.');
+            }
+        }
+    });
+    
+    // Update form count
+    function updateFormCount() {
+        const totalForms = document.getElementById('id_form-TOTAL_FORMS');
+        const rows = entriesTable.querySelectorAll('.entry-row');
+        totalForms.value = rows.length;
+        
+        // Update form indices
+        rows.forEach((row, index) => {
+            row.querySelectorAll('input').forEach(input => {
+                input.name = input.name.replace(/-\d+-/, '-' + index + '-');
+                input.id = input.id.replace(/-\d+-/, '-' + index + '-');
+            });
+        });
+        
+        checkBalance();
+    }
+    
+    // Balance checking
+    function checkBalance() {
+        const debitInputs = document.querySelectorAll('input[name$="-debit"]');
+        const creditInputs = document.querySelectorAll('input[name$="-credit"]');
+        
+        let totalDebits = 0;
+        let totalCredits = 0;
+        
+        debitInputs.forEach(input => {
+            const value = parseFloat(input.value) || 0;
+            totalDebits += value;
+        });
+        
+        creditInputs.forEach(input => {
+            const value = parseFloat(input.value) || 0;
+            totalCredits += value;
+        });
+        
+        const difference = Math.abs(totalDebits - totalCredits);
+        
+        if (totalDebits === 0 && totalCredits === 0) {
+            balanceCheck.style.display = 'none';
+        } else {
+            balanceCheck.style.display = 'block';
+            
+            if (Math.abs(difference) < 0.01) {
+                balanceCheck.style.backgroundColor = '#d4edda';
+                balanceCheck.style.color = '#155724';
+                balanceCheck.style.border = '1px solid #c3e6cb';
+                balanceStatus.innerHTML = `✅ Balanced! Debits: $${totalDebits.toFixed(2)}, Credits: $${totalCredits.toFixed(2)}`;
+            } else {
+                balanceCheck.style.backgroundColor = '#f8d7da';
+                balanceCheck.style.color = '#721c24';
+                balanceCheck.style.border = '1px solid #f5c6cb';
+                balanceStatus.innerHTML = `❌ Unbalanced! Difference: $${difference.toFixed(2)}`;
+            }
+        }
+    }
+    
+    // Add event listeners for balance checking
+    entriesTable.addEventListener('input', checkBalance);
+    
+    // Initial balance check
+    checkBalance();
+});
+</script>
+
+<style>
+#entriesTable input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+#entriesTable input:focus {
+  border-color: #3498db;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+}
+
+.entry-row td {
+  vertical-align: middle;
+}
+
+.remove-row {
+  background: linear-gradient(45deg, #e74c3c, #c0392b) !important;
+  color: white !important;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.remove-row:hover {
+  background: linear-gradient(45deg, #c0392b, #e74c3c) !important;
+}
+</style>
+{% endblock %}

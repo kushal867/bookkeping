@@ -1,18 +1,21 @@
 from django import forms
-from django.forms import formset_factory
-from .models import Transaction, Account
-
+from django.forms import inlineformset_factory
+from .models import Transaction, LedgerEntry
 
 class TransactionForm(forms.ModelForm):
     class Meta:
         model = Transaction
-        fields = ('date', 'description')
+        fields = ['description']  # 'date' is auto-managed and excluded
+        
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['description'].required = True
 
-
-class EntryForm(forms.Form):
-    account = forms.ModelChoiceField(queryset=Account.objects.all())
-    debit = forms.DecimalField(max_digits=14, decimal_places=2, required=False, initial=0)
-    credit = forms.DecimalField(max_digits=14, decimal_places=2, required=False, initial=0)
-
-
-EntryFormSet = formset_factory(EntryForm, extra=2)
+EntryFormSet = inlineformset_factory(
+    Transaction, LedgerEntry,
+    fields=['account', 'debit', 'credit'],
+    extra=2,
+    can_delete=False,
+    min_num=1,
+    validate_min=True
+)
